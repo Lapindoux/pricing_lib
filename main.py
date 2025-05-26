@@ -8,7 +8,7 @@ def run_pricing():
 
     # 📌 Définition des paramètres du marché
     S, K, T, r, sigma = 100, 100, 0.25, 0.05, 0.2
-    num_simulations, num_steps = 4, 1
+    num_simulations, num_steps = 10000, 252
     barrier = 120  # Seuil pour options barrières
 
     # 🎲 Génération des trajectoires
@@ -34,13 +34,14 @@ def run_pricing():
 
     # 💰 Pricing des différentes options
     results = {
-        "CALL européen": monte_carlo_pricing(ST, K, r, T, vanilla_call),
-        "PUT européen": monte_carlo_pricing(ST, K, r, T, vanilla_put),
-        "CALL Knock-Out": monte_carlo_pricing(ST, K, r, T, barrier_knock_out, barrier),
-        "CALL Knock-In": monte_carlo_pricing(ST, K, r, T, barrier_knock_in, barrier),
-        "Option asiatique": monte_carlo_pricing(ST, K, r, T, asian_payoff),
+        "CALL européen": monte_carlo_pricing(ST, K, r, T, payoff_sousjacent=vanilla_call),
+        "PUT européen": monte_carlo_pricing(ST, K, r, T, payoff_sousjacent=vanilla_put),
+        "CALL Knock-Out": monte_carlo_pricing(ST, K, r, T, barrier_knock_out, vanilla_call, barrier),
+        "CALL Knock-In": monte_carlo_pricing(ST, K, r, T, barrier_knock_in, vanilla_call, barrier),
+        "Put Knock-Out": monte_carlo_pricing(ST, K, r, T, barrier_knock_out, vanilla_put, barrier),
+        "PUT Knock-In":  monte_carlo_pricing(ST, K, r, T, barrier_knock_in, vanilla_put, barrier),
+        "Option asiatique": monte_carlo_pricing(ST, K, r, T, payoff_sousjacent=asian_payoff),
     }
-
     # 📊 Affichage des résultats
     print("\n=== Résultats du Pricing Monte Carlo ===")
     for option, price in results.items():

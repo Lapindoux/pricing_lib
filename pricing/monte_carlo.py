@@ -27,22 +27,20 @@ def monte_carlo_simulation(S: float, T: float, r: float, sigma: float, num_simul
 
 import numpy as np
 
-def monte_carlo_pricing(ST: np.ndarray, K: float, r: float, T: float, payoff_function, barrier=None) -> float:
-    """
-    Applique un payoff aux trajectoires générées et calcule le prix de l'option.
+def monte_carlo_pricing(ST: np.ndarray, K: float, r: float, T: float, payoff_function=None, payoff_sousjacent=None, barrier=None) -> float:
+    """Calcule le prix en évitant la double application du payoff sous-jacent."""
 
-    Paramètres :
-    - ST : Matrice des trajectoires (num_simulations, num_steps)
-    - K : Prix d'exercice
-    - r : Taux sans risque
-    - T : Durée jusqu'à échéance
-    - payoff_function : Fonction qui applique un payoff
-    - barrier : Niveau de barrière (si applicable)
+    # 🔍 Cas sans barrière → Payoff sous-jacent seul
+    if payoff_sousjacent is not None and payoff_function is None:
+        payoff = payoff_sousjacent(ST[:, -1], K)
 
-    Retourne :
-    - Prix estimé de l'option
-    """
-    payoff = payoff_function(ST, K, barrier) if barrier is not None else payoff_function(ST, K)
+    # 🚀 Cas avec barrière → Applique seulement `payoff_function()`
+    elif payoff_function is not None and payoff_sousjacent is not None:
+        payoff = payoff_function(ST, K, barrier, payoff_sousjacent)  # ✅ Supprime la double multiplication
+
+    else:
+        raise ValueError("Il faut fournir un payoff sous-jacent, avec ou sans barrière.")
+
     price = np.exp(-r * T) * np.mean(payoff)
-
     return price
+
