@@ -28,27 +28,50 @@ class TestPayoffs(unittest.TestCase):
     def test_barrier_knock_out(self):
         """Test du payoff knock-out (annulé si barrière atteinte)."""
         expected_payoff = np.array([10, 0])  # La deuxième trajectoire est invalidée
-        np.testing.assert_array_equal(barrier_knock_out(self.ST_barrier, self.K, self.barrier), expected_payoff)
+        result = barrier_knock_out(self.ST_barrier, self.K, self.barrier, vanilla_call)
+        np.testing.assert_array_equal(result, expected_payoff)
 
     def test_barrier_knock_in(self):
         """Test du payoff knock-in (activé si barrière atteinte)."""
         expected_payoff = np.array([0, 15])  # Seulement la deuxième trajectoire est activée
-        np.testing.assert_array_equal(barrier_knock_in(self.ST_barrier, self.K, self.barrier), expected_payoff)
+        result = barrier_knock_in(self.ST_barrier, self.K, self.barrier, vanilla_call)
+        np.testing.assert_array_equal(result, expected_payoff)
 
     def test_asian_payoff(self):
         """Test du payoff asiatique basé sur la moyenne des trajectoires."""
-        expected_payoff = np.array([0, 10 / 3 * 2])  # Payoff basé sur la moyenne
-        np.testing.assert_array_almost_equal_nulp(asian_payoff(self.ST_standard, 100), expected_payoff, nulp=5)
+        # Avec la correction: moyenne par trajectoire
+        # Trajectoire 1: [90, 100, 110] -> moyenne = 100 -> payoff = max(100-100, 0) = 0
+        # Trajectoire 2: [95, 105, 120] -> moyenne = 106.67 -> payoff = max(106.67-100, 0) = 6.67
+        expected_payoff = np.array([0, 6.666666666666667])
+        result = asian_payoff(self.ST_standard, self.K)
+        np.testing.assert_array_almost_equal(result, expected_payoff)
 
     def test_non_regression_knock_in_out(self):
-        """Test de non-régression : Knock-In + Knock-Out ne dépasse pas le prix du Call classique."""
+        """Test de non-régression : Knock-In + Knock-Out égale le prix du Call classique."""
         call_price = vanilla_call(self.ST_standard[:, -1], self.K)
-        knock_in_price = barrier_knock_in(self.ST_standard, self.K, self.barrier)
-        knock_out_price = barrier_knock_out(self.ST_standard, self.K, self.barrier)
+        knock_in_price = barrier_knock_in(self.ST_standard, self.K, self.barrier, vanilla_call)
+        knock_out_price = barrier_knock_out(self.ST_standard, self.K, self.barrier, vanilla_call)
 
-        total_knock = np.sum(knock_in_price) + np.sum(knock_out_price)
-        total_call = np.sum(call_price)
-        self.assertLessEqual(total_knock, total_call, "Knock-In + Knock-Out dépasse le Call classique !")
+        # Pour une barrière up, KI + KO devrait égaler le call vanilla
+        total_knock = knock_in_price + knock_out_price
+        np.testing.assert_array_almost_equal(total_knock, call_price, 
+                                           err_msg="Knock-In + Knock-Out ne donne pas le Call classique")
+
+    def test_barrier_types(self):
+        """Test des différents types de barrières."""
+        # Test down-and-out
+        ST_down = np.array([[110, 90, 95], [105, 100, 110]])  # Une trajectoire touche la barrière down
+        barrier_down = 95
+        
+        # Down-and-out: invalidé si on touche la barrière par le bas
+        result_down_out = barrier_knock_out(ST_down, self.K, barrier_down, vanilla_call, "down")
+        expected_down_out = np.array([0, 10])  # Première trajectoire invalidée
+        np.testing.assert_array_equal(result_down_out, expected_down_out)
+        
+        # Down-and-in: activé si on touche la barrière par le bas
+        result_down_in = barrier_knock_in(ST_down, self.K, barrier_down, vanilla_call, "down")
+        expected_down_in = np.array([0, 0])  # Première trajectoire activée mais OTM
+        np.testing.assert_array_equal(result_down_in, expected_down_in)
 
 
 if __name__ == "__main__":

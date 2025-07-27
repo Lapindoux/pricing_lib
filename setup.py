@@ -6,7 +6,7 @@ setup(
     author="Basile Simonin",
     author_email="simonin.basile@hotmail.fr",
     description="Librairie de pricing d'options avec Monte Carlo et modèles avancés.",
-    long_description=open("README.md", encoding="utf-8").read(),
+    long_description=open("README.txt", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/ton-repo/pricing_lib",
     packages=find_packages(),
